@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>เต็นท์รถมือสอง หาดใหญ่และใกล้เคียง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;700&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --paper:#F4F5F2; --surface:#FFFFFF; --ink:#1E2428; --muted:#5E6A72; --line:#D9DDD8;
+  --asphalt:#2A3136; --mark:#E7B10A; --mid:#2E7D84; --small:#8A6A45; --warn:#A6401F;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16191B; --surface:#1F2427; --ink:#E9ECEA; --muted:#A3ADB3; --line:#33393D;
+  --asphalt:#0F1214; --mark:#F0C02A; --mid:#55A9AF; --small:#C29B6C; --warn:#E07A5A; color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#16191B; --surface:#1F2427; --ink:#E9ECEA; --muted:#A3ADB3; --line:#33393D;
+  --asphalt:#0F1214; --mark:#F0C02A; --mid:#55A9AF; --small:#C29B6C; --warn:#E07A5A; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.7 "Sarabun","Leelawadee UI","Tahoma",sans-serif}
+header{background:var(--asphalt);color:#F3F3EF;padding:calc(36px + env(safe-area-inset-top,0px)) 24px 0;position:relative}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font:700 clamp(28px,4.6vw,46px)/1.25 "Anuphan","Tahoma",sans-serif;margin:0 0 8px;max-width:22ch}
+.lede{color:#C4CACD;margin:0 0 22px;max-width:70ch}
+.road{height:10px;background:repeating-linear-gradient(90deg,var(--mark) 0 46px,transparent 46px 74px);margin-top:28px}
+.legend{display:flex;flex-wrap:wrap;gap:18px;color:#DADFE1;font-size:15px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:2px solid #fff}
+.mapbox{margin:28px 0 0}
+.maptabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.maptabs button{font:600 15px "Sarabun",sans-serif;padding:6px 14px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.maptabs button[aria-pressed="true"]{background:var(--asphalt);color:#fff;border-color:var(--asphalt)}
+.maptabs .hint{color:var(--muted);font-size:14px}
+#map,#gmap{height:440px;border-radius:6px;border:1px solid var(--line);width:100%}
+#gmap{display:none;border:1px solid var(--line)}
+.mapbox.g #map{display:none}.mapbox.g #gmap{display:block}
+.showmap{font:600 15px "Sarabun",sans-serif;background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;text-decoration-color:var(--mark);text-underline-offset:3px;cursor:pointer}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:26px 0 8px}
+.bar button,.bar select{font:600 15px "Sarabun",sans-serif;padding:7px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.bar .count{margin-left:auto;color:var(--muted);font-size:15px}
+:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+main{padding:0 24px 60px}
+.dealer{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:24px;padding:28px 0;border-top:1px solid var(--line)}
+.dealer[hidden]{display:none}
+.dealer h2{font:700 22px/1.35 "Anuphan",sans-serif;margin:0 0 6px}
+.tag{display:inline-block;font-weight:600;font-size:13px;padding:1px 10px;border-radius:3px;color:#fff;margin-right:6px}
+.tag.ใหญ่{background:var(--mark);color:#1E2428}.tag.กลาง{background:var(--mid)}.tag.เล็ก{background:var(--small)}
+dl{margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:15px}
+dt{color:var(--muted)} dd{margin:0}
+dd a{color:inherit;text-decoration-color:var(--mark);text-underline-offset:3px}
+.tel{font-weight:600;font-size:17px}
+.coord{font-variant-numeric:tabular-nums}
+.copy{font:inherit;font-size:13px;margin-left:6px;padding:0 8px;border:1px solid var(--line);border-radius:3px;background:none;color:var(--muted);cursor:pointer}
+.note{margin:12px 0 0}
+.warn{margin:10px 0 0;color:var(--warn);font-size:15px;border-left:3px solid var(--warn);padding-left:10px}
+.links{margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-weight:600;font-size:15px}
+.links a{color:var(--ink)}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start}
+figure{margin:0}
+figure img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;background:var(--line);display:block}
+figure.fail img{display:none}
+figure.fail::before{content:"ภาพโหลดไม่ได้ ดูภาพได้ใน Google Maps";display:grid;place-items:center;aspect-ratio:4/3;background:var(--line);color:var(--muted);font-size:13px;text-align:center;border-radius:4px;padding:8px}
+figcaption{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4}
+.notes{border-top:1px solid var(--line);padding-top:24px;color:var(--muted);font-size:14px;max-width:80ch}
+@media (max-width:760px){.dealer{grid-template-columns:1fr}#map,#gmap{height:320px}.bar .count{margin-left:0;width:100%}}
+@media print{.mapbox,.bar{display:none}.dealer{break-inside:avoid}header{background:none;color:#000}.lede,.legend{color:#333}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>เต็นท์รถมือสอง หาดใหญ่และอำเภอใกล้เคียง</h1>
+  <p class="lede">14 แห่งใน อ.หาดใหญ่ บางกล่ำ สะเดา และจะนะ จ.สงขลา พร้อมพิกัด เบอร์โทร และภาพร้าน รวบรวมจาก Google Maps เมื่อ 6 พฤศจิกายน 2569</p>
+  <div class="legend">
+    <span><i class="dot" style="background:#E7B10A"></i>ขนาดใหญ่ ลานรวมหรือรถหลายร้อยคัน</span>
+    <span><i class="dot" style="background:#2E7D84"></i>ขนาดกลาง</span>
+    <span><i class="dot" style="background:#8A6A45"></i>ขนาดเล็ก บูติก</span>
+  </div>
+  <div class="road"></div>
+</div></header>
+<main><div class="wrap">
+  <div class="mapbox" id="mapbox">
+    <div class="maptabs" role="toolbar" aria-label="รูปแบบแผนที่">
+      <button id="tabAll" aria-pressed="true">แผนที่รวมทุกเต็นท์</button>
+      <button id="tabG" aria-pressed="false">Google Maps</button>
+      <span class="hint" id="maphint">กดหมุดเพื่อดูชื่อร้าน หรือกด “ดูบนแผนที่” ที่แต่ละเต็นท์เพื่อเปิดใน Google Maps</span>
+    </div>
+    <div id="map" role="region" aria-label="แผนที่รวมเต็นท์รถ"></div>
+    <iframe id="gmap" title="Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+  </div>
+  <div class="bar" role="toolbar" aria-label="กรองรายการ">
+    <button data-sz="all" aria-pressed="true">ทั้งหมด</button>
+    <button data-sz="ใหญ่" aria-pressed="false">ขนาดใหญ่</button>
+    <button data-sz="กลาง" aria-pressed="false">ขนาดกลาง</button>
+    <button data-sz="เล็ก" aria-pressed="false">ขนาดเล็ก</button>
+    <select id="dist" aria-label="อำเภอ"><option value="all">ทุกอำเภอ</option><option>หาดใหญ่</option><option>บางกล่ำ</option><option>สะเดา</option><option>จะนะ</option></select>
+    <span class="count" id="count"></span>
+  </div>
+  <div id="list"></div>
+  <div class="notes">
+    <p>ขนาดเต็นท์ประเมินจากจำนวนรถที่รีวิวกล่าวถึงและจำนวนรีวิว ไม่ใช่ข้อมูลสต็อกจริง ทุกร้านขายรถยนต์นั่งและกระบะเป็นหลัก ควรโทรยืนยันสต็อกและเวลาเปิดก่อนเข้าไป</p>
+    <p>ภาพประกอบเป็นภาพของแต่ละเต็นท์ เครดิตภาพระบุใต้ภาพ หากภาพไม่ขึ้นให้กดเปิดใน Google Maps แผนที่รวมใช้ภาพแผนที่ของ Esri (ข้อมูล © OpenStreetMap contributors) และแผนที่รายร้านใช้ Google Maps</p>
+  </div>
+</div></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const D=[{"n": "รถบ้านหาดใหญ่ พิบูลย์คาร์เซ็นเตอร์", "sz": "ใหญ่", "dist": "หาดใหญ่", "addr": "278 ถ.สนามบิน-ลพบุรีราเมศวร์ ต.ควนลัง อ.หาดใหญ่", "tel": "081-896-2410", "lat": 6.999563, "lng": 100.4309331, "cid": "15730593155503281061", "web": "https://www.rodbanhatyai.com/", "rate": "4.9 (12 รีวิว)", "hrs": "จ.–ส. 08:30–17:30 ปิดวันอาทิตย์", "note": "รถบ้านหลากหลายรุ่น รีวิวระบุมีรถ 300+ คัน รับซื้อรถด้วย", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLe74vDJSVe8eze9SCDu6MY1rohPcmqGgsNN-j1aXOAal0l0W8nAgVgYGbwit6-Tp3NR_4m7JiJpP1jprZ50dYeeF9Z8NH-oPRe9crneK7_sjAjsxbrtmmgmnHFBTIVz4OPqkucyS0NGoPxs=s4800-w800-h600", "by": "พิบูลย์คาร์เซ็นเตอร์", "local": "images/phibun-car-center-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdW2H0gvYHY9nmObgjNKRDiv9flbI3FrTAmg2tm3VAzTd3og0iVQuD5D0Kj079Yr-4Aa8Li-g8iJZAvMebfQ1_ple2HGpsbBPRFYMc0clTo-fw_odWiAPOs4nYXxs6b2X_K7KTVJErgFBt-=s4800-w800-h600", "by": "Adisorn Chadepowpun", "local": "images/phibun-car-center-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLe66JaviNYoJqZuQJyi5t-FOzH3A8wDwATEHxnd0uHF-VdqiUFYd-GkumVD6pMjvY3rhoVw0ptso8q1pfUp-f8tQbFCdnoLlDjhzCBUri3KSBnsjA5xnNp1-YPR5HlWjO3Q4NHDyP1f9YkC=s4800-w800-h600", "by": "พิบูลย์คาร์เซ็นเตอร์", "local": "images/phibun-car-center-3.jpg"}], "id": 1, "slug": "phibun-car-center"}, {"n": "ตลาดรถหาดใหญ่ยูเนี่ยนคาร์", "sz": "ใหญ่", "dist": "หาดใหญ่", "addr": "71 ซ.คลอยุทธิศ ต.คลองแห อ.หาดใหญ่", "tel": "081-369-3519", "lat": 7.0290209, "lng": 100.4745396, "cid": "747087217860300070", "web": "", "rate": "4.5 (34 รีวิว)", "hrs": "จ.–ส. 08:00–17:00 ปิดวันอาทิตย์", "note": "ตลาดรถรวมหลายเต็นท์ในที่เดียว เหมาะเดินเทียบราคา อยู่ข้างองค์การเภสัชกรรมสาขาภาคใต้", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdOzuYv1NXKC27MMb4x9AeZ6KVDG7SgM2y724p2_qMlh0EidkCN65mv-rheaW0VaqUbyLV5D8M6JrE4Pz7k4ipeCCB3mBXSZHtzJpSAzOanjGnBzCZnYAGL3buNjm3rWaVCvz9F=s4800-w800-h600", "by": "Sakchai Choochat", "local": "images/union-car-market-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdQPdxqgHezGc21Biw0c-4_mmKsJc2w6V_yG9w6uEm0C9jsfbWyMhOJ3H5824RN9Okk10YDbMwVVfZ5JjBvsdIcA57sSsbsQTopEE1BM0F3UinVUXa5jlSA8Hk0boJRGr5jhq1M=s4800-w800-h600", "by": "wij sam", "local": "images/union-car-market-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLezy9lhNEot-l2Ol4sQjZB2XLwhG1uWDvvBesFZGr1jKv-FVlYLowAIQfGAMPTqmszyfgrw-whfLTzhL08lU5FV1GgGdyO-i9eYoLYygxm7nmTwLrDOGvLacqElFFdAmVoM_dFc=s4800-w800-h600", "by": "sommit chuaynuson", "local": "images/union-car-market-3.jpg"}], "id": 2, "slug": "union-car-market"}, {"n": "ก๊อตคาร์เซ็นเตอร์", "sz": "ใหญ่", "dist": "บางกล่ำ", "addr": "159/1 ม.4 ต.ท่าช้าง อ.บางกล่ำ", "tel": "089-657-9004", "lat": 7.0545574, "lng": 100.3782378, "cid": "14698888846358809550", "web": "https://www.one2car.com/dealer/rodbanphasawang", "rate": "4.9 (169 รีวิว)", "hrs": "เปิดทุกวัน 08:00–18:00", "note": "รีวิวมากที่สุดในกลุ่ม มีหน้าร้านบน One2Car", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLe9aX7UQeKk5HaVPhY3RK6KuviYuRL8hatnrqhGX4QlgVsV01OM3tJ3oJc3T5Ly3RzrtC5OpqshKbi5sPPCDvJ9-O0TWqshKCyugTusOnJK8Vv7vvOhWApzzFgYGxkna41ITGMFAiFdq4s=s4800-w800-h600", "by": "ก๊อตคาร์เซ็นเตอร์", "local": "images/kot-car-center-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLehYUbPmR5apOZmNw12RNtpyIErOKi32zcJdkCe45m2J4Ws42eXfMgFJHj-iI2W1XOrCQPu2zpkCv2YeW631EQuEYHyA2lr3ElTZ3TFI7KRbVGM2H02PHXEatPTN-O5cHJD_zO8rd7LAfX8=s4800-w800-h600", "by": "ก๊อตคาร์เซ็นเตอร์", "local": "images/kot-car-center-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfFo1wNDdi1rEEn2AQ9kW6V0GECHETc1oWhwAj7Qm-99u3FggUngWS2fFLlzr0EcOirLpPEBjed-PzFvMqX6LgRWc4UM1XKPDk0RrejmRfjjKfcEltsQcOv8l49Ne8uY7T3ng0uPurWBzoP=s4800-w800-h600", "by": "ก๊อตคาร์เซ็นเตอร์", "local": "images/kot-car-center-3.jpg"}], "id": 3, "slug": "kot-car-center"}, {"n": "นอบ ออโต้คาร์ สาขา 2", "sz": "กลาง", "dist": "บางกล่ำ", "addr": "264 ต.ท่าช้าง อ.บางกล่ำ", "tel": "091-169-6752", "lat": 7.0082668, "lng": 100.413642, "cid": "2620313759596882157", "web": "http://www.nopautocarhatyai.com/", "rate": "4.3 (34 รีวิว)", "hrs": "เปิดทุกวัน 08:00–17:30", "note": "รถมือสองเกรด A ตัวเลือกมาก ประกันหลังการขาย 6 เดือน", "warn": "มีรีวิวว่าพนักงานแจ้งรุ่นย่อยไม่ตรงกับตัวรถ ควรตรวจสเปกและเลขตัวถังเอง", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfhj0kemvqr9iOJp0yBM3iPYWGAYdd5VgkuT03NH9whh27-Gr5xqnpQvS2Ir0GhCldS2vxzrOcXjjZ4ZKPj65DWlF9d8-Q05hLjSVFt9U9MSY-Oy9awCzgpIYFIRxMWLvsEtWzbWw=s4800-w800-h600", "by": "Snap ZeeD", "local": "images/nop-autocar-branch2-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdm1f2Sg5FPHvVET90AcLV7_KAqmr32JNPK_0VtqOo-vlT_4xVt_ZPrjBiTNw77WMLbd4IA9izAlvcX6xWrRRs-P6_I0IncHrNRqJc3Dj6s9lysW8WZdsx3iMvoarHUx8T724Mz=s4800-w800-h600", "by": "สมศรี โกวิทพิทยาการ", "local": "images/nop-autocar-branch2-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLd-jmPHOYUn2-uBM9OJshldNTChoThz1Uh1RrgM8OVpvTMLdfnCVg9jwpT7mwS30tHtEprEJj-YwrKyGoNhWjw-r3jx1jScgakK4rCWXe1ZD95rzZ8_931BcIQgm23UR6r9Ad5QYClwlJKR=s4800-w800-h600", "by": "jiranan ontong", "local": "images/nop-autocar-branch2-3.jpg"}], "id": 4, "slug": "nop-autocar-branch2"}, {"n": "นอบ ออโต้คาร์ (สาขาหลัก)", "sz": "กลาง", "dist": "บางกล่ำ", "addr": "99/10 ต.ท่าช้าง อ.บางกล่ำ", "tel": "062-059-8809", "lat": 7.0085236, "lng": 100.4129563, "cid": "2098327417817867681", "web": "https://www.nopautocarhatyai.com/car.php", "rate": "5.0 (5 รีวิว)", "hrs": "เปิดทุกวัน 08:00–18:00", "note": "เครือเดียวกับสาขา 2 ดูสต็อกออนไลน์ได้ที่เว็บไซต์ร้าน", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLffTKxEGXrLoPTGvfEHGML3Oyx_MDd37smwbGqQdcUKgse1r7mxXoa0T4w9mmmbPt6YZgEH9DzqFWsl3rke4mure09Iu2JYqOF7Sv8lQch-WVaBAj6QSedwqXyz1yVxpsNmYCapXGcowCeT=s4800-w800-h600", "by": "jiranan ontong", "local": "images/nop-autocar-main-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLePfy2m1DkmHbJNNJqrnSOqknUivW6fvNDpo_Bu2sUqL5ELOuV-To2hl8CaSZ9schV2wZ2Xe6ZrDyztcGTh8QOseA3xF9eAnat0nMQy5Lij4NvtP075YvxNi1eKJ-a40C0tJBAqk52Pw2EF=s4800-w800-h600", "by": "jiranan ontong", "local": "images/nop-autocar-main-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdGpJi1Y4wbY6q1PToZqliBCYPLFRpdHAgAiJZFNqTGU17MKD4duU4JlXBj72A6NyHbNaWBy-jLW7d3UvQVkpn5vW41KAws8pQVzfty3w4NJjT1doZ0jYR9m1p-meJDg6OGX-YeCXn-Hkc=s4800-w800-h600", "by": "jiranan ontong", "local": "images/nop-autocar-main-3.jpg"}], "id": 5, "slug": "nop-autocar-main"}, {"n": "PP AUTO CAR HATYAI", "sz": "กลาง", "dist": "บางกล่ำ", "addr": "ต.ท่าช้าง อ.บางกล่ำ (2C8J+66X)", "tel": "093-542-6693", "lat": 7.0150283, "lng": 100.430788, "cid": "12847713954834291011", "web": "", "rate": "4.7 (36 รีวิว)", "hrs": "จ.–ส. 08:30–17:30, อา. 09:00–17:00", "note": "รถไมล์น้อย รับซื้อและขาย", "warn": "มีรีวิวเรื่องราคาประเมินต่ำกว่าที่ตกลงด้วยวาจาและการโอนล่าช้า ควรขอใบประเมินเป็นลายลักษณ์อักษร", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLeUGwuF4a3HiI-LkMW2mhEDS18iJvmeyfIxwSkGV6W0VDmbuv0UBjj3xsvysRtGegFUWpx1c5f_3YKzNaGdBynovvQWgt82IB5xOg-czHNj4uaJwwYrlWIoZQkXQTXLWflltm2TMJTsB2s7=s4800-w800-h600", "by": "PP AUTO CAR HATYAI", "local": "images/pp-autocar-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfntc1FqKiipVnNT3OFcnSfx9jEiIhaBIKswPX3hs8a6Oqg71okqnmd2piii1QRr8SOfoo6ktwW0-d-xyOFFSSbmzm23IoVF-5PDbE2GZ2skHK-yyeosw7lhoi-YaQQYPmB4RTNHCV6fL0q=s4800-w800-h600", "by": "PP AUTO CAR HATYAI", "local": "images/pp-autocar-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLeYpfhGgh5yph7o8uYVJGx5ATlaQl6Z8T3vbDzuzW9KdHe2XfHv8YjlnKCijN1vbM-sC39nepiew3mJwCWuCnPrcwa-dERWIL605n1XRw38LBtH6djFfLOKPuoyPcwqTTJ2I7cZIdZTCVqp=s4800-w800-h600", "by": "PP AUTO CAR HATYAI", "local": "images/pp-autocar-3.jpg"}], "id": 6, "slug": "pp-autocar"}, {"n": "SC AUTO HATYAI", "sz": "กลาง", "dist": "หาดใหญ่", "addr": "ต.คลองแห อ.หาดใหญ่", "tel": "082-984-4008", "lat": 7.068021, "lng": 100.4902977, "cid": "8190072972947504415", "web": "https://www.facebook.com/scautohatyai/", "rate": "4.7 (23 รีวิว)", "hrs": "เปิดทุกวัน 08:30–17:30", "note": "มีรถให้เลือกหลากหลาย ซื้อขายง่าย", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLf8gDeJIrvkUiHyQdIKiaJUvx7J960mwOjOcY1yKbffQ-XlXI6UmqkfdghRTQnE9xjUyDsLRTKDm20A7_-UA7TxcNbA_rTGLCa_ZXp5IZTKgLurh25FSThygRwnxOhXNTvEKgpPULZ2yBJn=s4800-w800-h600", "by": "SC AUTO HATYAI", "local": "images/sc-auto-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfI43iMhgJ6YnvT0DRH0pbmBYsKKqhprb8hbmbzYtP6GEutQox9-Gfgjh_HQJQsO6FuZHPkPvk6Za8F-Q_ZMv2_84g-km8s3q297gWlx8OyULYYjPwzDc8kY39i1NJ0D2SXwTBHCA=s4800-w800-h600", "by": "SC AUTO HATYAI", "local": "images/sc-auto-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfB79B5N6mm4LNhzzInszZpiaWjxlnPpIOjMKLZUj7QHoZW5wTnMR5_7x1HmIWslnvP7mL9sNDNTbXWExUnArWffGBx0i8BIEdTIgKsOA5VnAiBfezGwAqzHw6QKFiB00X-JCzqDg=s4800-w800-h600", "by": "Natthakit K.", "local": "images/sc-auto-3.jpg"}], "id": 7, "slug": "sc-auto"}, {"n": "เอ๋ ควนมีดคาร์เซ็นเตอร์", "sz": "กลาง", "dist": "จะนะ", "addr": "109/1 ต.จะโหนง อ.จะนะ", "tel": "083-651-2114", "lat": 6.9813738, "lng": 100.6740749, "cid": "17224879220354997582", "web": "", "rate": "4.2 (57 รีวิว)", "hrs": "เปิดทุกวัน 08:00–18:00", "note": "หลายรุ่นหลายแบบ", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfd13itqk1wYPTroHMO4dwteShbNpqdpclMQ_b19bjEj56yNAObo51wxVTvx-35dspcmuBJeMxc5oKTS3s5mv3lmYdEeZJYbNeu887XuqxQBslRJm9hcy9rd4Q0QgwQ5PezmQg=s4800-w800-h600", "by": "เอ๋ ควนมีดคาร์เซ็นเตอร์", "local": "images/ae-khuanmit-car-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLe5qcHTAEifl6haEPmq3XObnxlRBzGn2kH1lmfDfmxib2qcs8wj_ECurf4mLgDdJN7Hj1II_GgauWG7SvBVhAoxeAhsr8ZSnMILS3WJosWU27x0IL4_b1KLGpdRqLUhqUhLQZxh3w=s4800-w800-h600", "by": "เขมนันท์ จรสุวรรณ", "local": "images/ae-khuanmit-car-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdvlFmIxs8_B622HRjZw4ndaFQ65McJIrd-0pSOPWwTvm8VBPl1OeVfOxFn_AEKsjbhkd8wZMcFKhReIj-tD15Cg11aFcVs298KbrhXM4kjWBypRs7NEF9LrByZ6QGDp5tmsMJh=s4800-w800-h600", "by": "Saowanee Veeravanich", "local": "images/ae-khuanmit-car-3.jpg"}], "id": 8, "slug": "ae-khuanmit-car"}, {"n": "เสม คงคา รถมือสอง", "sz": "เล็ก", "dist": "หาดใหญ่", "addr": "103 ถ.เลียบคลอง ร.5 ต.ควนลัง อ.หาดใหญ่", "tel": "084-991-1555", "lat": 6.9960503, "lng": 100.446595, "cid": "17079081659034072683", "web": "https://www.facebook.com/profile.php?id=61558931911741", "rate": "5.0 (22 รีวิว)", "hrs": "จ.–ส. 08:30–17:00 ปิดวันอาทิตย์", "note": "รถไมล์น้อย เข้าศูนย์เช็กก่อนส่งมอบ ส่งรถข้ามจังหวัดได้", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLcvhDQf8ILOxNt6QM-r0nGiX75RDcntKWoYA_N8lioQn_tGZR2030uzjqfgKjdsWcHRk-d-wXipeSVtOlSKvZ3OM1TTR1UooMvuarxZSiYnNwKmSxpwKNdA3JcBrNUPKXU5Nn2eww9754M_=s4800-w800-h600", "by": "เสม คงคา", "local": "images/sem-khongkha-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdNRktU-sM0NSgdkwjKs5XW71rpPpBOsEGTflKlZxn7opoW20DKZsNK5eA4ABxNF5hpqMYzGq2_8ZvBPWqMgzEImPVRi-nhd8VzG0QR9m4s4eam4e1iKlad8AP1-KovoniQgIAHij1dJwfQ=s4800-w800-h600", "by": "เสม คงคา", "local": "images/sem-khongkha-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLeW1fFRbf2gxxCgvJ9pizqPe9gTrbnctNN82_j-ZBTyfojMWnH4uSPdp-UHrbUlhkXVDyygurxvdrBQgb7AhCX4aD4a82iNB-hE2kO5B0I_Y4JhSwOdJ5Lq5e3u67oucXv-wO0Hwx-Clctz=s4800-w800-h600", "by": "เสม คงคา", "local": "images/sem-khongkha-3.jpg"}], "id": 9, "slug": "sem-khongkha"}, {"n": "PK Autocar Hatyai", "sz": "เล็ก", "dist": "หาดใหญ่", "addr": "401 ถ.ควนลังศรีภูวนารถ ต.ควนลัง อ.หาดใหญ่", "tel": "081-285-6478", "lat": 6.9922236, "lng": 100.4404974, "cid": "15614584293705958620", "web": "https://www.facebook.com/PKAutocarHatyai/", "rate": "4.9 (19 รีวิว)", "hrs": "จ.–ส. 08:30–17:30 ปิดวันอาทิตย์", "note": "รถบ้านสภาพดี", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLcbmiukWSsvVzodrjL7_PqapaGY9174g2WDh6jPkLLAOl7ZoY8UQ7J-C9N6xyUp_3jEpuymDfREVgaJ6BXwN33n4K8TCEDGSQnML7n_q6R0hAp5187FhVTjjAD99jOjHjuoNJBT=s4800-w800-h600", "by": "PK Autocar Hatyai", "local": "images/pk-autocar-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLel1VXa_RxFgax9KonFwe61v1P6Ccg2Zh2MH04UzwYth7ZOAbT4plnh5fEsQleU3UgL1mdIT15ynFMOPBcsJc5b_qeRQ0-0HI5KJ_4NdQjzxPgBL9eOVdAnIYqwQwKbSurlyiDP=s4800-w800-h600", "by": "PK Autocar Hatyai", "local": "images/pk-autocar-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLcsGVAS_mtKIiHYp7rFJfwEZ-O-7MbhYBZpgcn0cYd2d7otfW7kyr0vkO7WHjxITR4-7eg-qPzNjIYiN0h6WPdn3z9VG0O8JIB5zhX01XF9bZMW6x1BVVjNhEn0gJdywPa8DLuq=s4800-w800-h600", "by": "Sakchai Choochat", "local": "images/pk-autocar-3.jpg"}], "id": 10, "slug": "pk-autocar"}, {"n": "สุวรรณ ออโต้คาร์", "sz": "เล็ก", "dist": "บางกล่ำ", "addr": "224 ม.12 ถ.สนามบิน ต.ท่าช้าง อ.บางกล่ำ", "tel": "081-766-1566", "lat": 7.0100819, "lng": 100.4314218, "cid": "2885243670666531574", "web": "https://www.facebook.com/Suwanautocar.18", "rate": "5.0 (5 รีวิว)", "hrs": "เปิดทุกวัน 08:00–18:00", "note": "รถบ้านทั่วไป", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLf7xRx1hGfB76oLw049NZDnv-T2Lb25IGq1cEavc75uy4a8aLSFZmFlfK_D8tFGmPVj07eSnJGzwk8OUr_55wq3cFyHIm8W3-MYWai_ZwaANx8faLJUSpeT1AUHOtieovzrdDEQ=s4800-w800-h600", "by": "สุวัฒน์ สุวรรณสะอาด", "local": "images/suwan-autocar-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLcFjeecscmIsyK0N3p539mTIe3wT_9DkpVAAueOmzMPysdeihtnuqIteQKcZv9nU2jwjFikgmjzZn75kTscvWaWK1MRXYCa75YmHE3s6iQ5-arBRXsTkhhSIlawFLLJhbows4w=s4800-w800-h600", "by": "Sakchai Choochat", "local": "images/suwan-autocar-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLfH8YPGH0R148hxilZgKwRj7Himkb_YYjTRQoeaQVjXO9MvOXnLDq9cfIBC6fxqQUnRTL9d7x1x7zdXYtIijVuk9vIgmmzlzdgyA-1fbjhNO7qZtB_YSWuapu2BdXr8LrEHFacJ=s4800-w800-h600", "by": "สุวรรณ ออโต้คาร์", "local": "images/suwan-autocar-3.jpg"}], "id": 11, "slug": "suwan-autocar"}, {"n": "หาดใหญ่รถยนต์มือสองราคาถูก", "sz": "เล็ก", "dist": "หาดใหญ่", "addr": "อ.หาดใหญ่", "tel": "065-507-0065", "lat": 7.008298, "lng": 100.4897513, "cid": "10941317599540574182", "web": "", "rate": "5.0 (1 รีวิว)", "hrs": "เปิดทุกวัน 08:30–17:30", "note": "เน้นรถราคาประหยัด รับแลกเปลี่ยน", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdGwFxdElR81ym_wpFNkMX7N7ce3Dwvq2xfPlGPit1Dthyon8S3pZ_vsnmKZErTf1PKtJ9PtjmF57Oi2S-6nr9TK_8BxapukpQNpHBwxd2dYMCYnCdOijJ0Ng5APnYKuaOIhso=s4800-w800-h600", "by": "ร้าน", "local": "images/hatyai-cheap-car-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLeILMXrbdVPT3_XfYTmFjOCyf6qyZ8Rkzg-bK1b0JWtRmcD6SjMzI-t1t1MK07Uo3NPS8EBNFOkaJHPJORo1MbAjM6k7uk10m2WUmqKoH_7ogaHWpgl4NLR5ipstcLwi7r2iSAX=s4800-w800-h600", "by": "ร้าน", "local": "images/hatyai-cheap-car-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLeHFAzwC1hBlLD49AML31Lzd6ztN5ahS4Ee-C1-hH4Xe4F__N3guTTAb50rnyOTU3FO7hIyJA5_8uYFXqXEjAfFwWBDs-a6m6UUPG2TuDh9k_chw8BA9JGODRT1NzTjVfX8QxhI=s4800-w800-h600", "by": "ร้าน", "local": "images/hatyai-cheap-car-3.jpg"}], "id": 12, "slug": "hatyai-cheap-car"}, {"n": "เอเชียร์ออโต้คาร์", "sz": "เล็ก", "dist": "สะเดา", "addr": "13 ถ.กาญจนวนิช ต.พังลา อ.สะเดา", "tel": "089-299-7549", "lat": 6.799172, "lng": 100.4534141, "cid": "3360323861115108009", "web": "", "rate": "5.0 (4 รีวิว)", "hrs": "เปิดทุกวัน 07:30–19:00", "note": "รถตรงปก มีบริการหลังการขาย", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLc976po64MhIc23G3PchsjlqKgFjaq5ED-zjFvCpeXw_gaWEXOC11FEUSxT6hbKUOJr4arw17QrgH1G19ItJJa4-o8vQTnGmJE8N1V_FHtILT0WmIgkOI8ei9ILAmK3dIS_kA2Riw=s4800-w800-h600", "by": "ผู้ใช้ Google Maps", "local": "images/asia-autocar-sadao-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLdLDr_lHcpz2sZoOUruojq2CF6ztu1w8s7GXpdsOZm_1BceqeENQQE6DT4pLolFGU_FA-rpVKBux2_pE21foR4bLAmXgvzfM7Zcwy9oJsyQEbw-2yWtMJ708GirEeQi4YNCoHnn=s4800-w800-h600", "by": "ผู้ใช้ Google Maps", "local": "images/asia-autocar-sadao-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLe7JrxrZLUEGa82mD2MWzKogE9rk43_NA1YiSN2td0Yry9D4flMyq0CPFMoR8DzPBegsessWTUqxCiP7mlzgp5IkIHq_ONvKFFZtP3rbX3yI25X1VRok7lxeepcRjvQYHoSjPFG=s4800-w800-h600", "by": "ผู้ใช้ Google Maps", "local": "images/asia-autocar-sadao-3.jpg"}], "id": 13, "slug": "asia-autocar-sadao"}, {"n": "เต็นท์รถจะนะกู๊ดคาร์", "sz": "เล็ก", "dist": "จะนะ", "addr": "ต.บ้านนา อ.จะนะ (WP9V+5MF)", "tel": "081-540-7487", "lat": 6.9179338, "lng": 100.7441736, "cid": "12185286082333462086", "web": "", "rate": "4.1 (10 รีวิว)", "hrs": "เปิดทุกวัน 08:00–19:00", "note": "รถบ้านมือสองทั่วไป", "p": [{"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLcY_Zytv1mgMWPvSEXANYOxLKAG6yuD8FWA0tuIv-wkRuKDW0a2F3PR918RXeo5aLSl1u9_j55xVTKk239PBp81BUQkixS4q7kC9dds4X6vskRcfQd_0vNPKRU4VtONQwftAjlDFg=s4800-w800-h600", "by": "Faizah Mama", "local": "images/chana-goodcar-1.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLeXHIb-7VmJaBb6BiL2UONZU7RKh6UiFxCSFYrKfFTBoXaoYpX1r0H9CNLkOdxk4SgxwP-yd7gRtjS4RcXgvDnUY0YhnE4wpQ2-ekdAfQP03bV7xmmrOUlO8meX_rF8ZGWyTpg=s4800-w800-h600", "by": "Faizah Mama", "local": "images/chana-goodcar-2.jpg"}, {"u": "https://lh3.googleusercontent.com/grass-cs/AABkmLftSP1IeOv_3cRxOzBJgcOc-HkEUMpVrnJj0hOp_mVyg0R2gmMM3TvWwH2suQIMji_a4o1vhmwhQMvsyUEvZt-jG6O3e-VmXM1I80uv0dWwQcfoveUCsGRITPZ_RjxMvhyQH2bF=s4800-w800-h600", "by": "Faizah Mama", "local": "images/chana-goodcar-3.jpg"}], "id": 14, "slug": "chana-goodcar"}];
+function imgFail(img){img.parentNode.classList.add("fail")}
+const COL={"ใหญ่":"#E7B10A","กลาง":"#2E7D84","เล็ก":"#8A6A45"};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const gm=d=>"https://maps.google.com/?cid="+d.cid;
+const dir=d=>`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
+const list=document.getElementById("list");
+list.innerHTML=D.map(d=>`
+<article class="dealer" id="d${d.id}" data-sz="${d.sz}" data-dist="${d.dist}">
+  <div>
+    <h2>${esc(d.n)}</h2>
+    <span class="tag ${d.sz}">ขนาด${d.sz}</span><span style="color:var(--muted);font-size:14px">อ.${esc(d.dist)} · ★ ${esc(d.rate)}</span>
+    <dl>
+      <dt>ที่อยู่</dt><dd>${esc(d.addr)}</dd>
+      <dt>โทร</dt><dd><a class="tel" href="tel:${d.tel.replace(/-/g,"")}">${d.tel}</a></dd>
+      <dt>พิกัด</dt><dd class="coord">${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}<button class="copy" data-c="${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}">คัดลอก</button></dd>
+      <dt>เวลาเปิด</dt><dd>${esc(d.hrs)}</dd>
+    </dl>
+    <p class="note">${esc(d.note)}</p>
+    ${d.warn?`<p class="warn">${esc(d.warn)}</p>`:""}
+    <div class="links"><a href="${gm(d)}" target="_blank" rel="noopener">เปิดใน Google Maps</a><button class="showmap" data-id="${d.id}">ดูบนแผนที่</button><a href="${dir(d)}" target="_blank" rel="noopener">นำทาง</a>${d.web?`<a href="${esc(d.web)}" target="_blank" rel="noopener">เว็บไซต์ร้าน</a>`:""}</div>
+  </div>
+  <div class="photos">${d.p.map((p,i)=>`<figure><img src="${p.u}" alt="ภาพ ${i+1} ของ ${esc(d.n)}" loading="lazy" referrerpolicy="no-referrer" onerror="imgFail(this)"><figcaption>ภาพ: ${esc(p.by)} / Google Maps</figcaption></figure>`).join("")}</div>
+</article>`).join("");
+document.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{try{navigator.clipboard.writeText(b.dataset.c);b.textContent="คัดลอกแล้ว";setTimeout(()=>b.textContent="คัดลอก",1500)}catch(e){}});
+let map,markers={};
+const box=document.getElementById("mapbox"),gmap=document.getElementById("gmap"),hint=document.getElementById("maphint");
+const gEmbed=(q,z)=>`https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${z}&hl=th&output=embed`;
+function showGoogle(d){
+  gmap.src=d?gEmbed(`${d.lat},${d.lng}`,16):gEmbed("เต็นท์รถมือสอง หาดใหญ่",12);
+  hint.textContent=d?`กำลังแสดง: ${d.n}`:"ภาพรวมจาก Google (แสดงผลค้นหาของ Google เอง หมุดทั้ง 14 แห่งดูได้ในแผนที่รวม)";
+  box.classList.add("g");tabAll.setAttribute("aria-pressed","false");tabG.setAttribute("aria-pressed","true");
+}
+function showAll(){box.classList.remove("g");tabAll.setAttribute("aria-pressed","true");tabG.setAttribute("aria-pressed","false");
+  hint.textContent="กดหมุดเพื่อดูชื่อร้าน หรือกด “ดูบนแผนที่” ที่แต่ละเต็นท์เพื่อเปิดใน Google Maps";if(map)setTimeout(()=>map.invalidateSize(),0)}
+tabAll.onclick=showAll;tabG.onclick=()=>showGoogle(null);
+document.querySelectorAll(".showmap").forEach(b=>b.onclick=()=>{showGoogle(D.find(x=>x.id==b.dataset.id));box.scrollIntoView({behavior:"smooth",block:"start"})});
+// basemap providers that need no API key; switch to the next one if tiles fail
+const PROV=[
+  ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles © Esri, HERE, Garmin, © OpenStreetMap contributors"}],
+  ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles © Esri"}],
+  ["https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}]
+];
+function addBase(i){
+  if(i>=PROV.length){showGoogle(null);tabAll.disabled=true;return}
+  let ok=0,bad=0;const layer=L.tileLayer(PROV[i][0],PROV[i][1]);
+  layer.on("tileload",()=>ok++);
+  layer.on("tileerror",()=>{if(++bad>=4&&ok===0){map.removeLayer(layer);addBase(i+1)}});
+  layer.addTo(map);
+}
+try{
+  map=L.map("map",{scrollWheelZoom:false});
+  addBase(0);
+  D.forEach(d=>{markers[d.id]=L.circleMarker([d.lat,d.lng],{radius:d.sz==="ใหญ่"?11:d.sz==="กลาง"?9:7,color:"#fff",weight:2,fillColor:COL[d.sz],fillOpacity:1})
+    .bindPopup(`<b>${esc(d.n)}</b><br>${d.tel}<br><a href="#d${d.id}">ดูรายละเอียด</a>`).addTo(map)});
+  map.fitBounds(D.map(d=>[d.lat,d.lng]),{padding:[30,30]});
+}catch(e){showGoogle(null);tabAll.disabled=true}
+let sz="all",dist="all";
+function apply(){let n=0,pts=[];D.forEach(d=>{const ok=(sz==="all"||d.sz===sz)&&(dist==="all"||d.dist===dist);
+  document.getElementById("d"+d.id).hidden=!ok;if(ok){n++;pts.push([d.lat,d.lng])}
+  if(map&&markers[d.id]){ok?markers[d.id].addTo(map):markers[d.id].remove()}});
+  document.getElementById("count").textContent=`แสดง ${n} จาก ${D.length} แห่ง`;
+  if(map&&pts.length)map.fitBounds(pts,{padding:[40,40],maxZoom:14});}
+document.querySelectorAll(".bar button").forEach(b=>b.onclick=()=>{sz=b.dataset.sz;document.querySelectorAll(".bar button").forEach(x=>x.setAttribute("aria-pressed",x===b));apply()});
+document.getElementById("dist").onchange=e=>{dist=e.target.value;apply()};
+apply();
+</script>
+</body>
+</html>
